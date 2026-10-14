@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IntruGuard Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+    <h1>🛡️ IntruGuard IDPS Dashboard</h1>
+
+    <!-- STATUS + TIMESTAMP -->
+    <div class="status-box">
+        <p>Status: <span class="active">● ACTIVE</span> &nbsp;|&nbsp; Last updated: <span class="timestamp">{{ now }}</span></p>
+    </div>
+
+    <!-- STATS BAR -->
+    {% set total   = logs | length %}
+    {% set attacks = [] %}
+    {% for log in logs %}{% if log[3] != 'BENIGN' %}{% set _ = attacks.append(1) %}{% endif %}{% endfor %}
+    {% set attack_count = attacks | length %}
+    {% set blocked_list = [] %}
+    {% for log in logs %}{% if log[4] == 'Blocked' %}{% set _ = blocked_list.append(1) %}{% endif %}{% endfor %}
+    {% set blocked_count = blocked_list | length %}
+    {% set benign_count  = total - attack_count %}
+
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-number total">{{ total }}</div>
+            <div class="stat-label">Total Logs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number attacks">{{ attack_count }}</div>
+            <div class="stat-label">Attacks Detected</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number blocked">{{ blocked_count }}</div>
+            <div class="stat-label">IPs Blocked</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number benign">{{ benign_count }}</div>
+            <div class="stat-label">Benign Flows</div>
+        </div>
+    </div>
+
+    <!-- LOG TABLE -->
+    <table>
+        <tr>
+            <th>Time</th>
+            <th>Source IP</th>
+            <th>Destination</th>
+            <th>Attack Type</th>
+            <th>Action</th>
+        </tr>
+
+        {% for log in logs %}
+
+        {% set attack = log[3] | string %}
+        {% set action = log[4] | string %}
+
+        <tr>
+            <td>{{ log[0] }}</td>
+            <td>{{ log[1] }}</td>
+            <td>{{ log[2] }}</td>
+
+            <td class="
+                {% if attack == 'BENIGN' %}benign
+                {% elif 'DDoS' in attack %}ddos
+                {% elif 'PortScan' in attack %}portscan
+                {% elif 'Bot' in attack %}bot
+                {% elif 'FTP-Patator' in attack or 'SSH-Patator' in attack %}brute
+                {% elif "Web Attack" in attack %}webattack
+                {% elif "SYN-Flood" in attack %}synflood
+                {% elif "UDP-Flood" in attack %}udpflood
+                {% else %}unknown
+                {% endif %}
+            ">{{ attack }}</td>
+
+            <td class="
+                {% if action == 'Allowed' %}allowed
+                {% else %}blocked
+                {% endif %}
+            ">{{ action }}</td>
+        </tr>
+
+        {% endfor %}
+
+        {% if logs | length == 0 %}
+        <tr>
+            <td colspan="5" class="empty-row">📡 No traffic logged yet — waiting for flows...</td>
+        </tr>
+        {% endif %}
+    </table>
+</div>
+
+<script>
+// Auto-refresh every 3 seconds (keeping your original interval)
+setInterval(() => { location.reload(); }, 3000);
+</script>
+
+</body>
+</html>
